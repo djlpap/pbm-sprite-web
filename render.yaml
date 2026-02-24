@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: pbm-sprite-editor
+    env: python
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    autoDeploy: true
+    healthCheckPath: /

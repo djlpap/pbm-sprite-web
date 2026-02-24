@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>PBM Sprite Editor (Web)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <header>
+    <h1>PBM Sprite Editor (Web)</h1>
+    <div class="toolbar">
+      <input type="file" id="openFile" accept=".pbm,.png"/>
+      <button id="newBtn">New…</button>
+      <button id="saveP4Btn">Save PBM (P4)</button>
+      <button id="exportP1Btn">Export PBM (P1)</button>
+      <button id="exportPNGBtn">Export PNG Preview</button>
+      <button id="gridBtn">Grid</button>
+      <button id="zoomOutBtn">Zoom -</button>
+      <button id="zoomInBtn">Zoom +</button>
+      <button id="penBtn">Pen: Black</button>
+      <span class="hint">(Left-click = current color, Right-click = opposite)</span>
+    </div>
+  </header>
+
+  <main>
+    <div id="canvasWrapper">
+      <canvas id="spriteCanvas"></canvas>
+    </div>
+  </main>
+
+  <dialog id="thresholdDlg">
+    <form method="dialog">
+      <h3>PNG → PBM Threshold</h3>
+      <input type="range" id="thresholdRange" min="0" max="255" value="128"/>
+      <div><canvas id="thresholdPreview"></canvas></div>
+      <menu>
+        <button id="applyThreshold">Apply</button>
+        <button id="cancelThreshold">Cancel</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="newDlg">
+    <form method="dialog">
+      <h3>New Sprite</h3>
+      <label>Width <input id="newW" type="number" min="1" max="2048" value="16"></label>
+      <label>Height <input id="newH" type="number" min="1" max="2048" value="16"></label>
+      <menu>
+        <button id="createNew">Create</button>
+        <button>Cancel</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
