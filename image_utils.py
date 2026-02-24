@@ -13,6 +13,10 @@ def to_1bit_threshold(img: Image.Image, threshold: int) -> Image.Image:
     return g.point(lambda p: 255 if p >= threshold else 0, mode="1")
 
 def write_pbm_ascii_p1(img_1bit: Image.Image) -> bytes:
+    """
+    Write ASCII PBM (P1).
+    PBM P1 uses ASCII '1' for black and '0' for white.
+    """
     if img_1bit.mode != "1":
         raise ValueError("Image must be mode '1' to write PBM P1.")
     w, h = img_1bit.size
@@ -24,9 +28,8 @@ def write_pbm_ascii_p1(img_1bit: Image.Image) -> bytes:
             bit = "1" if px[x, y] == 0 else "0"  # P1: 1=black, 0=white
             row_bits.append(bit)
         lines.append(" ".join(row_bits))
-    return ("
-".join(lines) + "
-").encode("ascii")
+    text = "\n".join(lines) + "\n"
+    return text.encode("ascii")
 
 def image_to_png_bytes(img: Image.Image) -> bytes:
     buf = BytesIO()
