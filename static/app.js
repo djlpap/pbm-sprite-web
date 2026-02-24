@@ -119,7 +119,11 @@ const openFile = document.getElementById('openFile');
 openFile.onchange = async (e)=>{
   const file = e.target.files[0];
   if (!file) return;
-  if (/\.png$/i.test(file.name)){
+
+  // For PNG: keep the client-side threshold preview dialog (as-is), but
+  // still support a "server open" path for PBM (P1/P4) and fallback.
+  if (/\.png$/i.test(file.name)) {
+    // --- PNG: same threshold dialog as before ---
     const dlg = document.getElementById('thresholdDlg');
     const range = document.getElementById('thresholdRange');
     const prev = document.getElementById('thresholdPreview');
@@ -154,26 +158,38 @@ openFile.onchange = async (e)=>{
       render();
     };
     document.getElementById('cancelThreshold').onclick = ()=> {};
-  } else {
-    const buf = await file.arrayBuffer();
-    const header = new TextDecoder('ascii').decode(buf.slice(0, 64));
-    if (header.startsWith('P1')) {
-      const s = new TextDecoder('ascii').decode(buf);
-      const tokens = s.replace(/#.*$/mg,'').trim().split(/\s+/);
-      let i = 1;
-      const w = parseInt(tokens[i++],10), h = parseInt(tokens[i++],10);
-      imgW = w; imgH = h;
-      data = new Uint8ClampedArray(w*h);
-      for (let p=0; p<w*h; p++){
-        const bit = tokens[i++] === '1' ? 0 : 255;
-        data[p] = bit;
-      }
-      render();
-    } else {
-      alert('For PBM P4 or other cases, use server parsing — not implemented in this minimal client-only loader.');
-    }
+    return;
   }
+
+  // --- PBM or anything else: send to backend /api/open (handles P1 & P4) ---
+  const fd = new FormData();
+  fd.append('file', file, file.name);
+  const r = await fetch('/api/open', { method: 'POST', body: fd });
+  if (!r.ok) {
+    const err = await r.json().catch(()=>({error: r.statusText}));
+    alert('Open failed: ' + (err.error || 'unknown error'));
+    return;
+  }
+  const res = await r.json();
+  // res: { width, height, png: "data:image/png;base64,..." }
+  const img = new Image();
+  img.onload = ()=>{
+    // Draw the server-returned 1-bit PNG into our internal buffer
+    imgW = res.width; imgH = res.height;
+    const c = document.createElement('canvas');
+    c.width = imgW; c.height = imgH;
+    const cctx = c.getContext('2d');
+    cctx.drawImage(img, 0, 0);
+    const id = cctx.getImageData(0,0,imgW,imgH);
+    data = new Uint8ClampedArray(imgW*imgH);
+    for (let i=0; i<imgW*imgH; i++){
+      data[i] = id.data[i*4]; // grayscale 0/255
+    }
+    render();
+  };
+  img.src = res.png;
 };
+
 
 // Save/export via backend
 async function postBlob(url, blob, extraForm={}) {
