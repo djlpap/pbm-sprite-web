@@ -14,8 +14,7 @@ def to_1bit_threshold(img: Image.Image, threshold: int) -> Image.Image:
 
 def write_pbm_ascii_p1(img_1bit: Image.Image) -> bytes:
     """
-    Write ASCII PBM (P1).
-    PBM P1 uses ASCII '1' for black and '0' for white.
+    Write ASCII PBM (P1). PBM P1 uses ASCII '1' for black and '0' for white.
     """
     if img_1bit.mode != "1":
         raise ValueError("Image must be mode '1' to write PBM P1.")
@@ -28,10 +27,47 @@ def write_pbm_ascii_p1(img_1bit: Image.Image) -> bytes:
             bit = "1" if px[x, y] == 0 else "0"  # P1: 1=black, 0=white
             row_bits.append(bit)
         lines.append(" ".join(row_bits))
-    text = "\n".join(lines) + "\n"
+    text = "
+".join(lines) + "
+"
     return text.encode("ascii")
+
+def write_pbm_binary_p4(img_1bit: Image.Image) -> bytes:
+    """
+    Write strict PBM P4 (binary) data.
+    PBM convention: 1 = black, 0 = white. Pillow '1' uses 0 for black, 255 for white.
+    Bits are packed MSB-first in each byte. Rows are padded to full bytes (0=white padding).
+    """
+    if img_1bit.mode != "1":
+        raise ValueError("Image must be mode '1' to write PBM P4.")
+    w, h = img_1bit.size
+    px = img_1bit.load()
+
+    header = f"P4
+{w} {h}
+".encode("ascii")
+
+    row_bytes = bytearray()
+    for y in range(h):
+        byte_val = 0
+        bit_count = 0
+        for x in range(w):
+            is_black = (px[x, y] == 0)  # Pillow '1': 0=black, 255=white
+            bit = 1 if is_black else 0
+            byte_val = (byte_val << 1) | bit
+            bit_count += 1
+            if bit_count == 8:
+                row_bytes.append(byte_val)
+                byte_val = 0
+                bit_count = 0
+        if bit_count != 0:
+            # pad remaining bits with 0 (white) on the right
+            byte_val = byte_val << (8 - bit_count)
+            row_bytes.append(byte_val)
+    return header + bytes(row_bytes)
 
 def image_to_png_bytes(img: Image.Image) -> bytes:
     buf = BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
+
