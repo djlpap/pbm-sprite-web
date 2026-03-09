@@ -114,16 +114,14 @@ document.getElementById('createNew').onclick = ()=>{
   }
 };
 
-// Open file (client-only preview; PNG with threshold dialog; basic P1 parsing)
+// Open file handler: PNG handled client-side with threshold preview; PBM (P1/P4) -> backend
 const openFile = document.getElementById('openFile');
 openFile.onchange = async (e)=>{
   const file = e.target.files[0];
   if (!file) return;
 
-  // For PNG: keep the client-side threshold preview dialog (as-is), but
-  // still support a "server open" path for PBM (P1/P4) and fallback.
   if (/\.png$/i.test(file.name)) {
-    // --- PNG: same threshold dialog as before ---
+    // PNG with threshold preview
     const dlg = document.getElementById('thresholdDlg');
     const range = document.getElementById('thresholdRange');
     const prev = document.getElementById('thresholdPreview');
@@ -161,7 +159,7 @@ openFile.onchange = async (e)=>{
     return;
   }
 
-  // --- PBM or anything else: send to backend /api/open (handles P1 & P4) ---
+  // PBM or others: backend parsing (handles P1 and P4)
   const fd = new FormData();
   fd.append('file', file, file.name);
   const r = await fetch('/api/open', { method: 'POST', body: fd });
@@ -171,10 +169,8 @@ openFile.onchange = async (e)=>{
     return;
   }
   const res = await r.json();
-  // res: { width, height, png: "data:image/png;base64,..." }
   const img = new Image();
   img.onload = ()=>{
-    // Draw the server-returned 1-bit PNG into our internal buffer
     imgW = res.width; imgH = res.height;
     const c = document.createElement('canvas');
     c.width = imgW; c.height = imgH;
@@ -189,7 +185,6 @@ openFile.onchange = async (e)=>{
   };
   img.src = res.png;
 };
-
 
 // Save/export via backend
 async function postBlob(url, blob, extraForm={}) {
