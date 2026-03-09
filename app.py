@@ -2,7 +2,10 @@ import base64
 from io import BytesIO
 from flask import Flask, render_template, request, send_file, jsonify
 from PIL import Image
-from image_utils import flatten_alpha_to_white, to_1bit_threshold, write_pbm_ascii_p1, image_to_png_bytes
+from image_utils import (
+    flatten_alpha_to_white, to_1bit_threshold, write_pbm_ascii_p1,
+    image_to_png_bytes, write_pbm_binary_p4
+)
 
 app = Flask(__name__)
 
@@ -13,8 +16,9 @@ def index():
 @app.post("/api/open")
 def api_open():
     """
-    Accepts PNG or PBM, converts to 1-bit, returns base64-encoded PNG + dimensions.
-    For PNG: applies default threshold 128 initially (client can re-threshold locally).
+    Accepts PNG or PBM (P1/P4). Returns 1-bit PNG (base64) + width/height.
+    PNGs are flattened for alpha and thresholded at 128 by default
+    (client still offers a local threshold preview and Apply).
     """
     f = request.files.get("file")
     if not f:
@@ -39,17 +43,18 @@ def api_open():
 
 @app.post("/api/save_p4")
 def api_save_p4():
-    # Expects a 1x PNG representing the current edited state (0/255 grayscale).
     file = request.files.get("img")
     if not file:
         return jsonify({"error": "No image"}), 400
     img = Image.open(file.stream).convert("1")
-    buf = BytesIO()
-    # Pillow writes PBM P4 for mode '1' when format="PBM"
-    img.save(buf, format="PBM")
-    buf.seek(0)
-    return send_file(buf, mimetype="image/x-portable-bitmap",
-                     as_attachment=True, download_name="sprite.pbm")
+    data = write_pbm_binary_p4(img)
+    buf = BytesIO(data)
+    return send_file(
+        buf,
+        mimetype="image/x-portable-bitmap",
+        as_attachment=True,
+        download_name="sprite.pbm"
+    )
 
 @app.post("/api/export_p1")
 def api_export_p1():
@@ -78,3 +83,4 @@ def api_export_png():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
